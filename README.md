@@ -47,18 +47,19 @@ This script generates small thumbnail images for fonts from URLs.
    - Generate SVG thumbnails:
 
      ```bash
-     ./run_svg
+     ./run_svg.sh
      ```
 
    - Generate PNG thumbnails (if available):
 
      ```bash
-     ./run
+     ./run_png.sh
      ```
 
    - Regenerate all (remove old files and re-run):
+
      ```bash
-     ./regen
+     ./regen.sh
      ```
 
    Thumbnails are saved in `svgs/` for SVGs and `thumbnails/` for PNGs.
