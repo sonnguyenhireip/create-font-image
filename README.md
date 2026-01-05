@@ -31,7 +31,7 @@ This script generates small thumbnail images for fonts from URLs.
      export FONTS_API_URL="http://your-api-endpoint/sample/fonts"
      ```
 
-   The script only includes fonts with 'Regular' style. If the API fails, it falls back to a minimal list.
+   The script only includes fonts with 'Regular' style. If the API fails, no thumbnails will be generated (empty fallback).
 
 2. Customize thumbnail appearance (optional):
 
@@ -63,3 +63,10 @@ This script generates small thumbnail images for fonts from URLs.
      ```
 
    Thumbnails are saved in `svgs/` for SVGs and `thumbnails/` for PNGs.
+
+## Output
+
+- **SVG Thumbnails**: Saved in `svgs/` directory as `<font_name>_thumbnail.svg`
+- **PNG Thumbnails**: Saved in `thumbnails/` directory as `<font_name>_thumbnail.png` (if `font_thumbnail.py` is available)
+- Directories are created automatically if they don't exist.
+- Use `./regen.sh` to clean and regenerate all outputs.
