@@ -1,3 +1,4 @@
+
 # List of font URLs to generate thumbnails for
 font_urls = [
     "https://fonts.hiresdot.com/Abeezee/ABeeZee-Regular.woff2",
