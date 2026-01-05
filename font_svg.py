@@ -142,10 +142,15 @@ def create_svg(font_url, output_path, text=DEFAULT_TEXT, font_size=DEFAULT_FONT_
 
 def main():
     os.makedirs('svgs', exist_ok=True)
+    import re
     for url in font_urls:
         font_name = url.split('/')[-1].replace('.woff2', '')
+        # Create a nicer display name: replace hyphens/underscores with spaces and strip common style suffixes
+        display_name = re.sub(r"\b(regular|italic|bold|semibold|thin|light|medium|black)\b$", "", font_name.replace('-', ' ').replace('_', ' '), flags=re.I).strip()
+        if not display_name:
+            display_name = font_name
         output_path = f"svgs/{font_name}_thumbnail.svg"
-        create_svg(url, output_path)
+        create_svg(url, output_path, text=display_name)
 
 
 if __name__ == "__main__":
