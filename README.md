@@ -44,13 +44,13 @@ This script generates small thumbnail images for fonts from URLs.
 
 3. Run the scripts:
 
-   - Generate SVG thumbnails:
+   - Generate SVG thumbnails (recommended, thoroughly tested):
 
      ```bash
      ./run_svg.sh
      ```
 
-   - Generate PNG thumbnails (if available):
+   - Generate PNG thumbnails (if available - experimental, not thoroughly tested):
 
      ```bash
      ./run_png.sh
