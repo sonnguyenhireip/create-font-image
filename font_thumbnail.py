@@ -18,12 +18,19 @@ def create_thumbnail(font_url, output_path):
         # Load font
         font = ImageFont.truetype(temp_font_path, size=100)
         
-        # Calculate text bbox
+        # Calculate text bbox and handle fonts with unusual bbox or missing glyphs
+        text = "Sample"
         temp_img = Image.new('RGBA', (1, 1), color=(255,255,255,0))
         temp_draw = ImageDraw.Draw(temp_img)
-        bbox = temp_draw.textbbox((0, 0), "Sample", font=font)
+        bbox = temp_draw.textbbox((0, 0), text, font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
+        # If font doesn't provide glyphs for the sample (width/height == 0), use a fallback font
+        if text_width == 0 or text_height == 0:
+            font = ImageFont.load_default()
+            bbox = temp_draw.textbbox((0, 0), text, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
         
         # Create image with small padding
         padding = 10
@@ -32,8 +39,10 @@ def create_thumbnail(font_url, output_path):
         img = Image.new('RGBA', (img_width, img_height), color=(255,255,255,0))
         draw = ImageDraw.Draw(img)
         
-        # Draw text with padding
-        draw.text((padding, padding), "Sample", fill=(0,0,0,255), font=font)
+        # Compute coordinates accounting for bbox so text is properly centered across fonts
+        x = padding - bbox[0]
+        y = padding - bbox[1]
+        draw.text((x, y), text, fill=(0,0,0,255), font=font)
         
         # Resize to thumbnail
         img.thumbnail((100, 100))
