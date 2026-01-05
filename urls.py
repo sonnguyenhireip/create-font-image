@@ -792,3 +792,65 @@ font_urls = [
     "https://fonts.hiresdot.com/Notosansnushu/NotoSansNushu-Regular.woff2",
     "https://fonts.hiresdot.com/Notosansogham/NotoSansOgham-Regular.woff2",
 ]
+
+# Try to fetch latest font list from API and replace the hardcoded list at import time.
+# Fallback: keep the hardcoded list if network/API fails.
+import os
+
+
+def fetch_font_urls(limit=None, api_url=None, base_url="https://fonts.hiresdot.com/"):
+    """Fetch fonts from the samples API and return a list of absolute font URLs.
+
+    Returns None on any error so caller can gracefully fall back to the hardcoded list.
+    """
+    if api_url is None:
+        api_url = os.environ.get('FONTS_API_URL', 'http://primary.hiresdot.com:8955/sample/fonts?limit=19')
+    try:
+        import requests
+        resp = requests.get(api_url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        items = data.get('items', []) if isinstance(data, dict) else []
+        urls = []
+        for item in items:
+            for f in item.get('fonts', []):
+                style = (f.get('style') or '').lower()
+                # Only include 'Regular' styles. If the style field is missing or
+                # unreliable, fall back to checking for 'Regular' in the filename.
+                urls_in_font = f.get('urls', []) or []
+                if style != 'regular':
+                    has_regular_name = any(('Regular' in os.path.basename(u)) for u in urls_in_font)
+                    if not has_regular_name:
+                        continue
+                for u in urls_in_font:
+                    # If style wasn't 'regular', only pick urls with 'Regular' in the basename
+                    if style != 'regular' and 'Regular' not in os.path.basename(u):
+                        continue
+                    if u.startswith('http://') or u.startswith('https://'):
+                        urls.append(u)
+                    else:
+                        path = u.lstrip('/')
+                        # Normalize API paths: some entries start with 'fonts/...' while our
+                        # existing URLs use the top-level '<family>/<file>.woff2' shape.
+                        if path.startswith('fonts/'):
+                            path = path[len('fonts/'):]
+                        urls.append(base_url.rstrip('/') + '/' + path)
+        # dedupe while preserving order
+        seen = set()
+        uniq = []
+        for u in urls:
+            if u not in seen:
+                seen.add(u)
+                uniq.append(u)
+        return uniq
+    except Exception:
+        return None
+
+
+# Replace font_urls with fetched list if available
+try:
+    fetched = fetch_font_urls()
+    if fetched:
+        font_urls = fetched
+except Exception:
+    pass
