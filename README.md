@@ -12,33 +12,53 @@ This script generates small thumbnail images for fonts from URLs.
 
 ## Usage
 
-1. Add font URLs to `urls.py`:
+1. Configure the number of fonts to generate:
 
-   ```python
-   font_urls = [
-       'https://fonts.hiresdot.com/Akronim/Akronim-Regular.woff2',
-       # Add more URLs here
-   ]
-   ```
+   The script fetches fonts dynamically from the API. To change the number of fonts generated:
 
-2. Run the scripts:
-
-   - Generate PNG thumbnails (existing behavior):
+   - Set the environment variable `FONTS_API_LIMIT`:
 
      ```bash
-     ./run
+     export FONTS_API_LIMIT=50
      ```
 
-   - Generate SVG thumbnails (new):
+     This will generate thumbnails for 50 fonts.
+
+   - Or edit `DEFAULT_LIMIT` in `urls.py` to change the default (currently 19).
+
+   - To use a different API endpoint, set `FONTS_API_URL`:
+     ```bash
+     export FONTS_API_URL="http://your-api-endpoint/sample/fonts"
+     ```
+
+   The script only includes fonts with 'Regular' style. If the API fails, it falls back to a minimal list.
+
+2. Customize thumbnail appearance (optional):
+
+   Edit constants in `font_svg.py`:
+
+   - `DEFAULT_TEXT`: The sample text (default: "Sample")
+   - `DEFAULT_WIDTH`, `DEFAULT_HEIGHT`: Thumbnail size (default: 200x100)
+   - `DEFAULT_FONT_SIZE`: Base font size (default: 100)
+   - `PADDING`: Internal padding (default: 8)
+
+3. Run the scripts:
+
+   - Generate SVG thumbnails:
 
      ```bash
      ./run_svg
      ```
 
-   - Recreate both outputs (remove and re-run):
+   - Generate PNG thumbnails (if available):
 
+     ```bash
+     ./run
+     ```
+
+   - Regenerate all (remove old files and re-run):
      ```bash
      ./regen
      ```
 
-Thumbnails will be saved as `<font_name>_thumbnail.png` in the `thumbnails/` directory and SVGs as `<font_name>_thumbnail.svg` in the `svgs/` directory.
+   Thumbnails are saved in `svgs/` for SVGs and `thumbnails/` for PNGs.

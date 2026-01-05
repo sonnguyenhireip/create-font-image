@@ -3,7 +3,14 @@ import base64
 import os
 from urls import font_urls
 
-def create_svg(font_url, output_path, text="Sample", font_size=100, width=200, height=100):
+# Configuration constants (change here to alter default behavior)
+DEFAULT_TEXT = "Sample"
+DEFAULT_FONT_SIZE = 100
+DEFAULT_WIDTH = 200
+DEFAULT_HEIGHT = 100
+PADDING = 8
+
+def create_svg(font_url, output_path, text=DEFAULT_TEXT, font_size=DEFAULT_FONT_SIZE, width=DEFAULT_WIDTH, height=DEFAULT_HEIGHT):
     # Download font
     response = requests.get(font_url)
     response.raise_for_status()
@@ -39,7 +46,7 @@ def create_svg(font_url, output_path, text="Sample", font_size=100, width=200, h
             embed_font = False
 
         # Compute a dynamic font size and precise width using actual glyph metrics
-        padding = 8
+        padding = PADDING
         max_w = max(10, width - 2 * padding)
         max_h = max(10, height - 2 * padding)
 
