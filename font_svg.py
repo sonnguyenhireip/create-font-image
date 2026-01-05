@@ -50,7 +50,19 @@ def create_svg(font_url, output_path, text="Sample", font_size=100, width=200, h
         if text:
             # Measure actual rendered text width at candidate font size
             try:
-                meas_font = ImageFont.truetype(temp_font_path, size=fs) if embed_font else ImageFont.load_default()
+                if embed_font:
+                    meas_font = ImageFont.truetype(temp_font_path, size=fs)
+                else:
+                    # Try to use a scalable truetype fallback for more accurate measurement.
+                    # Prefer DejaVu (common), then macOS Arial, otherwise fall back to load_default().
+                    try:
+                        meas_font = ImageFont.truetype("DejaVuSans.ttf", size=fs)
+                    except Exception:
+                        try:
+                            meas_font = ImageFont.truetype("/Library/Fonts/Arial.ttf", size=fs)
+                        except Exception:
+                            meas_font = ImageFont.load_default()
+
                 # use a reasonably large canvas for measurement to avoid clipping
                 measure_img = Image.new('RGBA', (max(2000, int(max_w * 3)), max(500, int(max_h * 3))), (255, 255, 255, 0))
                 measure_draw = ImageDraw.Draw(measure_img)
@@ -58,13 +70,22 @@ def create_svg(font_url, output_path, text="Sample", font_size=100, width=200, h
                 text_w = bbox[2] - bbox[0]
                 text_h = bbox[3] - bbox[1]
             except Exception:
-                # fallback to simple approximation if measurement fails
+                # fallback to simple approximation if measurement or font loading fails
                 char_factor = 0.6
                 text_w = int(fs * char_factor * len(text))
                 text_h = fs
 
             # If text is wider than available space, expand svg width to fit (keeping a padding)
             required_w = int(text_w + 2 * padding)
+
+            # Add an extra horizontal safety margin to account for shaping/overhang differences
+            # Use a larger margin when the font is embedded (complex scripts) to be conservative
+            if embed_font:
+                extra_margin = max(24, int(text_w * 0.20))
+            else:
+                extra_margin = max(12, int(text_w * 0.10))
+            required_w += extra_margin
+
             if required_w > width:
                 width = required_w
 
