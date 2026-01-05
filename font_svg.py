@@ -18,10 +18,14 @@ def create_svg(font_url, output_path, text="Sample", font_size=100, width=200, h
     import tempfile
 
     embed_font = True
+    temp_font_path = None
     try:
+        # write font to a temp file and keep it for measurement
         with tempfile.NamedTemporaryFile(delete=False, suffix='.woff2') as tf:
             tf.write(font_data)
             temp_font_path = tf.name
+
+        # Quick check whether we can load the font
         try:
             test_font = ImageFont.truetype(temp_font_path, size=100)
             test_img = Image.new('RGBA', (1, 1), (255, 255, 255, 0))
@@ -33,25 +37,51 @@ def create_svg(font_url, output_path, text="Sample", font_size=100, width=200, h
                 embed_font = False
         except Exception:
             embed_font = False
+
+        # Compute a dynamic font size and precise width using actual glyph metrics
+        padding = 8
+        max_w = max(10, width - 2 * padding)
+        max_h = max(10, height - 2 * padding)
+
+        # Start with a font size based on height
+        fs = int(max_h * 0.8)
+        fs = min(fs, max_h)
+
+        if text:
+            # Measure actual rendered text width at candidate font size
+            try:
+                meas_font = ImageFont.truetype(temp_font_path, size=fs) if embed_font else ImageFont.load_default()
+                # use a reasonably large canvas for measurement to avoid clipping
+                measure_img = Image.new('RGBA', (max(2000, int(max_w * 3)), max(500, int(max_h * 3))), (255, 255, 255, 0))
+                measure_draw = ImageDraw.Draw(measure_img)
+                bbox = measure_draw.textbbox((0, 0), text, font=meas_font)
+                text_w = bbox[2] - bbox[0]
+                text_h = bbox[3] - bbox[1]
+            except Exception:
+                # fallback to simple approximation if measurement fails
+                char_factor = 0.6
+                text_w = int(fs * char_factor * len(text))
+                text_h = fs
+
+            # If text is wider than available space, expand svg width to fit (keeping a padding)
+            required_w = int(text_w + 2 * padding)
+            if required_w > width:
+                width = required_w
+
+            # Also, if measured text height exceeds available, reduce font size proportionally
+            if text_h > max_h:
+                scale = max_h / float(text_h)
+                fs = max(10, int(fs * scale))
+
     finally:
+        # clean up temp font file
         try:
-            os.unlink(temp_font_path)
+            if temp_font_path:
+                os.unlink(temp_font_path)
         except Exception:
             pass
 
-    # Compute a dynamic font size so the text fits inside the SVG
-    padding = 8
-    max_w = max(10, width - 2 * padding)
-    max_h = max(10, height - 2 * padding)
-
-    # Start with a font size based on height and then scale down to fit width if needed
-    fs = int(max_h * 0.8)
-    if text:
-        # approximate glyph width factor (empirical)
-        char_factor = 0.6
-        approx_w = fs * char_factor * len(text)
-        if approx_w > max_w:
-            fs = max(10, int((max_w) / (char_factor * len(text))))
+    # Ensure font-size does not exceed bounding height
     fs = min(fs, max_h)
 
     # Build SVG; if font has no glyphs, use a generic fallback (sans-serif)
@@ -63,7 +93,7 @@ def create_svg(font_url, output_path, text="Sample", font_size=100, width=200, h
         family_css = "sans-serif"
 
     svg = f'''<?xml version="1.0" encoding="utf-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" overflow="hidden">
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" overflow="visible">
   <style type="text/css">
     {font_face}    .sample {{ font-family: {family_css}; font-size: {fs}px; fill: #000; }}
   </style>
