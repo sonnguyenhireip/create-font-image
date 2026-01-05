@@ -21,17 +21,24 @@ This script generates small thumbnail images for fonts from URLs.
    ]
    ```
 
-2. Run the script:
+2. Run the scripts:
 
-   ```bash
-   ./run.sh
-   ```
+   - Generate PNG thumbnails (existing behavior):
 
-   Or manually:
+     ```bash
+     ./run
+     ```
 
-   ```bash
-   source venv/bin/activate
-   python font_thumbnail.py
-   ```
+   - Generate SVG thumbnails (new):
 
-Thumbnails will be saved as `<font_name>_thumbnail.png` in the `thumbnails/` directory.
+     ```bash
+     ./run_svg
+     ```
+
+   - Recreate both outputs (remove and re-run):
+
+     ```bash
+     ./regen
+     ```
+
+Thumbnails will be saved as `<font_name>_thumbnail.png` in the `thumbnails/` directory and SVGs as `<font_name>_thumbnail.svg` in the `svgs/` directory.
