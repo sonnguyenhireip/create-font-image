@@ -151,13 +151,22 @@ def create_svg(font_url, output_path, text=DEFAULT_TEXT, font_size=DEFAULT_FONT_
             max_y = ascent
         # baseline_y is set so the vertical center of the glyph bounds sits at height/2
         baseline_y = height / 2 + ((max_y + min_y) * scale) / 2
-        # Calculate total width for centering
+        # Calculate total width for centering (sanitize suspicious hmtx advances)
         total_width = 0
+        saw_suspect_metric = False
         for char in text:
             code = ord(char)
             if code in cmap:
                 glyph_name = cmap[code]
-                advance = font['hmtx'][glyph_name][0] * scale
+                raw_advance = font['hmtx'][glyph_name][0]
+                # Detect sentinel/invalid advances (e.g. 65535) or otherwise huge/negative values
+                if raw_advance >= 0xFF00 or raw_advance < -units_per_em * 10 or raw_advance > units_per_em * 100:
+                    if not saw_suspect_metric:
+                        print(f"Warning: font {font_name} contains suspicious advance width ({raw_advance}) for glyph {glyph_name}; treating as 0")
+                        saw_suspect_metric = True
+                    advance = 0
+                else:
+                    advance = raw_advance * scale
                 total_width += advance
         x_pos = (width - total_width) / 2
         paths = []
@@ -173,7 +182,11 @@ def create_svg(font_url, output_path, text=DEFAULT_TEXT, font_size=DEFAULT_FONT_
                     glyph.draw(pen, font['glyf'])
                     path_d = svg_pen.getCommands()
                     paths.append(f'<path d="{path_d}" fill="#000" />')
-                advance = font['hmtx'][glyph_name][0] * scale
+                raw_advance = font['hmtx'][glyph_name][0]
+                if raw_advance >= 0xFF00 or raw_advance < -units_per_em * 10 or raw_advance > units_per_em * 100:
+                    advance = 0
+                else:
+                    advance = raw_advance * scale
                 x_pos += advance
 
         svg = f'''<?xml version="1.0" encoding="utf-8"?>
