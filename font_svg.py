@@ -2,6 +2,10 @@ import requests
 import base64
 import os
 from urls import font_urls
+from fontTools.ttLib import TTFont
+from fontTools.pens.svgPathPen import SVGPathPen
+from fontTools.pens.transformPen import TransformPen
+from fontTools.misc.transform import Transform
 
 # Configuration constants (change here to alter default behavior)
 DEFAULT_TEXT = "Sample"
@@ -16,8 +20,6 @@ def create_svg(font_url, output_path, text=DEFAULT_TEXT, font_size=DEFAULT_FONT_
     response.raise_for_status()
     font_data = response.content
 
-    # Base64-encode font for embedding in SVG
-    b64 = base64.b64encode(font_data).decode('ascii')
     font_name = os.path.basename(font_url).replace('.woff2', '')
 
     # Check if the font provides glyphs for the sample text using Pillow (fallback if not)
@@ -26,11 +28,14 @@ def create_svg(font_url, output_path, text=DEFAULT_TEXT, font_size=DEFAULT_FONT_
 
     embed_font = True
     temp_font_path = None
+    font = None
     try:
         # write font to a temp file and keep it for measurement
         with tempfile.NamedTemporaryFile(delete=False, suffix='.woff2') as tf:
             tf.write(font_data)
             temp_font_path = tf.name
+
+        font = TTFont(temp_font_path)
 
         # Quick check whether we can load the font
         try:
@@ -98,8 +103,8 @@ def create_svg(font_url, output_path, text=DEFAULT_TEXT, font_size=DEFAULT_FONT_
 
             # Also, if measured text height exceeds available, reduce font size proportionally
             if text_h > max_h:
-                scale = max_h / float(text_h)
-                fs = max(10, int(fs * scale))
+                scale_factor = max_h / float(text_h)
+                fs = max(10, int(fs * scale_factor))
 
     finally:
         # clean up temp font file
@@ -112,32 +117,63 @@ def create_svg(font_url, output_path, text=DEFAULT_TEXT, font_size=DEFAULT_FONT_
     # Ensure font-size does not exceed bounding height
     fs = min(fs, max_h)
 
-    # Build SVG; if font has no glyphs, use a generic fallback (sans-serif)
-    if embed_font:
-        font_face = f"@font-face {{\n      font-family: '{font_name}';\n      src: url('data:font/woff2;base64,{b64}') format('woff2');\n    }}\n"
-        family_css = f"'{font_name}', sans-serif"
-    else:
-        font_face = ""
-        family_css = "sans-serif"
+    # Build SVG
+    if embed_font and font:
+        # Generate vector paths
+        cmap = font.getBestCmap()
+        units_per_em = font['head'].unitsPerEm
+        scale = fs / units_per_em
+        ascent = font['hhea'].ascent * scale
+        descent = font['hhea'].descent * scale
+        baseline_y = height / 2 + (ascent + descent) / 2
+        # Calculate total width for centering
+        total_width = 0
+        for char in text:
+            code = ord(char)
+            if code in cmap:
+                glyph_name = cmap[code]
+                advance = font['hmtx'][glyph_name][0] * scale
+                total_width += advance
+        x_pos = (width - total_width) / 2
+        paths = []
+        for char in text:
+            code = ord(char)
+            if code in cmap:
+                glyph_name = cmap[code]
+                glyph = font['glyf'][glyph_name]
+                if glyph.numberOfContours > 0:
+                    transform = Transform(scale, 0, 0, -scale, x_pos, baseline_y)
+                    svg_pen = SVGPathPen(font['glyf'])
+                    pen = TransformPen(svg_pen, transform)
+                    glyph.draw(pen, font['glyf'])
+                    path_d = svg_pen.getCommands()
+                    paths.append(f'<path d="{path_d}" fill="#000" />')
+                advance = font['hmtx'][glyph_name][0] * scale
+                x_pos += advance
 
-    svg = f'''<?xml version="1.0" encoding="utf-8"?>
+        svg = f'''<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" overflow="visible">
+  <rect width="100%" height="100%" fill="none" />
+  <g>
+    {''.join(paths)}
+  </g>
+</svg>
+'''
+        print(f"Created SVG for {font_name} (vector paths)")
+    else:
+        svg = f'''<?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" overflow="visible">
   <style type="text/css">
-    {font_face}    .sample {{ font-family: {family_css}; font-size: {fs}px; fill: #000; }}
+    .sample {{ font-family: sans-serif; font-size: {fs}px; fill: #000; }}
   </style>
   <rect width="100%" height="100%" fill="none" />
   <text x="50%" y="50%" class="sample" dominant-baseline="middle" text-anchor="middle">{text}</text>
 </svg>
 '''
+        print(f"Created SVG for {font_name} (fallback to sans-serif - no glyphs for '{text}')")
 
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(svg)
-
-    # Log whether we embedded the font or used fallback
-    if embed_font:
-        print(f"Created SVG for {font_name} (embedded font)")
-    else:
-        print(f"Created SVG for {font_name} (fallback to sans-serif - no glyphs for '{text}')")
 
 
 def main():
