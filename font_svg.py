@@ -90,16 +90,12 @@ def create_svg(font_url, output_path, text=DEFAULT_TEXT, font_size=DEFAULT_FONT_
             # If text is wider than available space, expand svg width to fit (keeping a padding)
             required_w = int(text_w + 2 * padding)
 
-            # Add an extra horizontal safety margin to account for shaping/overhang differences
-            # Use a larger margin when the font is embedded (complex scripts) to be conservative
-            if embed_font:
-                extra_margin = max(24, int(text_w * 0.20))
-            else:
-                extra_margin = max(12, int(text_w * 0.10))
+            # No extra margin to focus on text
+            extra_margin = 0
             required_w += extra_margin
 
-            if required_w > width:
-                width = required_w
+            # Auto-resize width based on content
+            width = required_w
 
             # Also, if measured text height exceeds available, reduce font size proportionally
             if text_h > max_h:
