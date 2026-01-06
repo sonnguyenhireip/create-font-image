@@ -119,9 +119,38 @@ def create_svg(font_url, output_path, text=DEFAULT_TEXT, font_size=DEFAULT_FONT_
         cmap = font.getBestCmap()
         units_per_em = font['head'].unitsPerEm
         scale = fs / units_per_em
-        ascent = font['hhea'].ascent * scale
-        descent = font['hhea'].descent * scale
-        baseline_y = height / 2 + (ascent + descent) / 2
+        # Compute vertical centering using actual glyph bounds for the text (more robust than relying on hhea metrics)
+        from fontTools.pens.boundsPen import BoundsPen
+        glyf = font['glyf']
+        min_y = None
+        max_y = None
+        cmap = font.getBestCmap()
+        for char in text:
+            code = ord(char)
+            if code in cmap:
+                glyph_name = cmap[code]
+                glyph = glyf[glyph_name]
+                pen = BoundsPen(glyf)
+                try:
+                    glyph.draw(pen, glyf)
+                    bounds = pen.bounds  # (xMin, yMin, xMax, yMax) or None
+                    if bounds:
+                        _, yMin, _, yMax = bounds
+                        if min_y is None or yMin < min_y:
+                            min_y = yMin
+                        if max_y is None or yMax > max_y:
+                            max_y = yMax
+                except Exception:
+                    # if any glyph fails to provide bounds, skip it and continue
+                    pass
+        if min_y is None or max_y is None:
+            # Fall back to hhea metrics if bounds couldn't be determined
+            ascent = font['hhea'].ascent
+            descent = font['hhea'].descent
+            min_y = descent
+            max_y = ascent
+        # baseline_y is set so the vertical center of the glyph bounds sits at height/2
+        baseline_y = height / 2 + ((max_y + min_y) * scale) / 2
         # Calculate total width for centering
         total_width = 0
         for char in text:
