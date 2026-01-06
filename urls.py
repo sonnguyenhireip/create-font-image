@@ -6,7 +6,7 @@ BASE_FONT_URL = os.environ.get('BASE_FONT_URL', 'https://fonts.hiresdot.com/')
 # Fonts API (no query parameters). Use env FONTS_API_URL to override the full API URL.
 FONTS_API_URL_BASE = os.environ.get('FONTS_API_URL', 'http://primary.hiresdot.com:8955/sample/fonts')
 # Default number of fonts to request from the API
-DEFAULT_LIMIT = int(os.environ.get('FONTS_API_LIMIT', '500'))
+DEFAULT_LIMIT = int(os.environ.get('FONTS_API_LIMIT', '1'))
 # Request timeout (seconds)
 REQUEST_TIMEOUT = int(os.environ.get('FONTS_REQUEST_TIMEOUT', '10'))
 # Which styles to include when parsing API results (lowercase)

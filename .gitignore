@@ -22,3 +22,7 @@ coverage.xml
 .hypothesis
 .DS_Store
 thumbnails/*.png  # Optional: ignore generated thumbnails
+
+# Generated assets
+svgs/
+thumbnails/
